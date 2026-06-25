@@ -416,11 +416,9 @@ h2 {
     stroke-width: 2.5;
 }
 
-/* While a selection is active, desaturate everything except the duplicates. */
-.treemap-square.has-selection .asset-cell:not(.is-duplicate-highlight) {
-    filter: saturate(0);
-    opacity: 0.55;
-}
+/* While a selection is active, non-highlighted cells are dimmed by swapping to
+ * a precomputed muted fill (see makeAssetColors in main.js) instead of an SVG
+ * `filter`, which forced a costly offscreen raster pass per cell. */
 
 /* Group container background matches the page so only the cells carry color. */
 .group-rect {

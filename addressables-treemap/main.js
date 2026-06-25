@@ -17,8 +17,10 @@ const state = {
     squareSize: 0,
 };
 
-// Maps an asset's first-occurrence color, keyed by duplicateKey, so every
+// Maps an asset's first-occurrence colors, keyed by duplicateKey, so every
 // duplicate occurrence renders with the same base color as the first copy.
+// Each value is { color, muted }: the full color and a grayscale/dimmed fill
+// used for non-highlighted cells while a selection is active.
 let firstColorByDuplicateKey = new Map();
 
 /* ----------------------------- Helpers --------------------------------- */
@@ -390,7 +392,7 @@ function duplicationLightness(count, maxOcc)
     return lerp(0.50, 1.00, t);
 }
 
-function makeAssetColor(asset, bundleRange, maxOcc)
+function makeAssetColors(asset, bundleRange, maxOcc)
 {
     // Hue and chroma derive from the duplicate key so every occurrence of a
     // duplicated asset gets exactly the same flat color.
@@ -398,18 +400,29 @@ function makeAssetColor(asset, bundleRange, maxOcc)
     const chroma = lerp(0.06, 0.14, hash01(asset.duplicateKey + ":c"));
     const count = asset.dup ? asset.dup.occurrenceCount : 1;
     const lightness = duplicationLightness(count, maxOcc);
-    return `oklch(${lightness.toFixed(3)} ${chroma.toFixed(3)} ${hue.toFixed(1)})`;
+    const color = `oklch(${lightness.toFixed(3)} ${chroma.toFixed(3)} ${hue.toFixed(1)})`;
+
+    // Muted fill for the "everything except the selection" state: drop chroma to
+    // 0 (grayscale) and blend lightness toward the dark treemap bg (L≈0.19),
+    // baking the old `saturate(0)` + `opacity:.55` look into a flat color. This
+    // lets selection swap a fill attribute instead of applying a per-cell SVG
+    // filter, which was forcing thousands of offscreen raster passes.
+    const mutedL = lightness * 0.55 + 0.085;
+    const muted = `oklch(${mutedL.toFixed(3)} 0 ${hue.toFixed(1)})`;
+
+    return { color, muted };
 }
 
 function getAssetColor(asset, bundleRange, maxOcc)
 {
-    if (firstColorByDuplicateKey.has(asset.duplicateKey))
+    let entry = firstColorByDuplicateKey.get(asset.duplicateKey);
+    if (!entry)
     {
-        return firstColorByDuplicateKey.get(asset.duplicateKey);
+        entry = makeAssetColors(asset, bundleRange, maxOcc);
+        firstColorByDuplicateKey.set(asset.duplicateKey, entry);
     }
-    const color = makeAssetColor(asset, bundleRange, maxOcc);
-    firstColorByDuplicateKey.set(asset.duplicateKey, color);
-    return color;
+    asset.colorMuted = entry.muted;
+    return entry.color;
 }
 
 /* ------------------------------ Render --------------------------------- */
@@ -607,9 +620,17 @@ function applySelectionClasses()
     const key = state.selectedDuplicateKey;
     square.classList.toggle("has-selection", !!key);
 
-    d3.selectAll("#treemap-svg g.asset-cell")
+    const cells = d3.selectAll("#treemap-svg g.asset-cell")
         .classed("is-duplicate-highlight", d => key && d.data.asset.duplicateKey === key)
         .classed("is-selected", d => state.selectedAssetId && d.data.asset.id === state.selectedAssetId);
+
+    // Dim non-selected cells by swapping to a precomputed muted fill rather than
+    // an SVG filter, so selecting (and repainting while selected) stays cheap.
+    cells.select("rect.cell-base").attr("fill", d =>
+    {
+        const asset = d.data.asset;
+        return (key && asset.duplicateKey !== key) ? asset.colorMuted : asset.color;
+    });
 }
 
 /* ----------------------------- Sidebar --------------------------------- */
@@ -650,7 +671,8 @@ function renderOffenders(model)
         const li = document.createElement("li");
         li.className = "offender";
         li.dataset.duplicateKey = g.duplicateKey;
-        const color = firstColorByDuplicateKey.get(g.duplicateKey) || "#888";
+        const entry = firstColorByDuplicateKey.get(g.duplicateKey);
+        const color = entry ? entry.color : "#888";
         li.innerHTML =
             `<div class="o-name"><span class="swatch" style="background:${color}"></span>${escapeHtml(g.displayName)}</div>` +
             `<div class="o-meta">${formatBytes(g.duplicatedBytes)} wasted · ${g.occurrenceCount}× · ${g.bundleNames.length} bundles</div>`;
