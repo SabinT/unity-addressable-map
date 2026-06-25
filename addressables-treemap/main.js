@@ -919,6 +919,7 @@ function renderApp(model, fileName)
     cachedRoot = null;
 
     document.getElementById("empty-state").classList.add("hidden");
+    document.getElementById("source-help").classList.add("hidden");
 
     renderSummary(model, fileName);
     renderOffenders(model);

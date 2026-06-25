@@ -16,6 +16,13 @@
                     <button id="open-file-btn" type="button">Open File</button>
                     <input id="file-input" type="file" accept=".json,application/json" hidden />
                     <p class="hint">Drag &amp; drop a <code>buildlayout.json</code> anywhere, or click Open File.</p>
+                    <div id="source-help" class="source-help">
+                        <p class="sh-title">Where is buildlayout.json?</p>
+                        <p>Unity writes it after an Addressables content build, inside your project at:</p>
+                        <p class="sh-path"><code>Library/com.unity.addressables/buildlayout.json</code></p>
+                        <p class="sh-note">Not there? Enable <strong>Build Layout Report</strong> in
+                        <strong>Edit ▸ Preferences ▸ Addressables</strong>, then rebuild.</p>
+                    </div>
                 </header>
 
                 <div id="messages" class="messages" role="status" aria-live="polite"></div>
@@ -49,13 +56,6 @@
             <div id="empty-state" class="empty-state">
                 <p class="es-title">No build layout loaded.</p>
                 <p class="hint">Drag &amp; drop a <code>buildlayout.json</code> file anywhere, or click <strong>Open File</strong>.</p>
-                <div class="es-help">
-                    <p class="es-help-title">Where is buildlayout.json?</p>
-                    <p>Unity writes it after an Addressables content build, inside your project folder:</p>
-                    <p class="es-path"><code>Library/com.unity.addressables/buildlayout.json</code></p>
-                    <p class="hint">Not there? Enable <strong>Build Layout Report</strong> in
-                    <strong>Edit ▸ Preferences ▸ Addressables</strong>, then build Addressables again.</p>
-                </div>
             </div>
         </main>
     </div>

@@ -452,35 +452,39 @@ h2 {
     margin: 0 0 4px;
 }
 
-.empty-state .es-help {
-    margin-top: 22px;
-    max-width: 440px;
-    padding: 14px 16px;
-    text-align: left;
+/* "Where is buildlayout.json?" help in the top panel; hidden once a file loads. */
+.source-help {
+    margin-top: 10px;
+    padding: 10px 12px;
     line-height: 1.5;
     background: var(--panel-bg);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    /* The container disables pointer events for drag/drop; re-enable here so the
-     * path can be selected and copied. */
-    pointer-events: auto;
-    user-select: text;
+    border-radius: 6px;
 }
 
-.empty-state .es-help p {
+.source-help.hidden {
+    display: none;
+}
+
+.source-help p {
     margin: 0 0 6px;
 }
 
-.empty-state .es-help p:last-child {
+.source-help p:last-child {
     margin-bottom: 0;
 }
 
-.empty-state .es-help-title {
+.source-help .sh-title {
     font-weight: 600;
     color: var(--text);
 }
 
-.empty-state .es-path code {
+.source-help .sh-note {
+    color: var(--text-dim);
+    font-size: 11.5px;
+}
+
+.source-help .sh-path code {
     display: block;
     padding: 6px 8px;
     margin: 2px 0;
