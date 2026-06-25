@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Addressables Build Layout Treemap</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <!-- Top panel: file loading + build summary + top offenders -->
+            <section class="sidebar-panel sidebar-top">
+                <header class="app-header">
+                    <h1>Addressables Treemap</h1>
+                    <button id="open-file-btn" type="button">Open File</button>
+                    <input id="file-input" type="file" accept=".json,application/json" hidden />
+                    <p class="hint">Drag &amp; drop a <code>buildlayout.json</code> anywhere, or click Open File.</p>
+                </header>
+
+                <div id="messages" class="messages" role="status" aria-live="polite"></div>
+
+                <div id="summary" class="summary"></div>
+
+                <div class="offenders-wrap">
+                    <h2>Top Offenders</h2>
+                    <ul id="offenders" class="offenders"></ul>
+                </div>
+            </section>
+
+            <!-- Bottom panel: selected asset detail -->
+            <section class="sidebar-panel sidebar-bottom">
+                <h2>Selected Asset</h2>
+                <div id="detail" class="detail">
+                    <p class="placeholder">Select an asset to view info.</p>
+                </div>
+            </section>
+        </aside>
+
+        <main class="treemap-area" id="treemap-area">
+            <div class="treemap-square" id="treemap-square">
+                <svg id="treemap-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+            </div>
+            <div id="empty-state" class="empty-state">
+                <p>No build layout loaded.</p>
+                <p class="hint">Drop a <code>buildlayout.json</code> file to begin.</p>
+            </div>
+        </main>
+    </div>
+
+    <div id="drop-overlay" class="drop-overlay">
+        <div class="drop-overlay-inner">Drop buildlayout.json to load</div>
+    </div>
+
+    <div id="tooltip" class="tooltip" role="tooltip"></div>
+
+    <script src="d3.min.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

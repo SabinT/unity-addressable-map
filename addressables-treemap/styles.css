@@ -1,0 +1,420 @@
+:root {
+    --sidebar-width: 360px;
+    --bg: #1c1f24;
+    --treemap-bg: #15171b;
+    --panel-bg: #23272e;
+    --panel-bg-2: #1a1d22;
+    --border: #343a43;
+    --text: #e6e8eb;
+    --text-dim: #9aa3ad;
+    --accent: #4c9aff;
+    --danger: #ff6b6b;
+    --warn: #ffcf6b;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg);
+}
+
+.app {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) 1fr;
+    height: 100vh;
+}
+
+/* ---------- Sidebar ---------- */
+
+.sidebar {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    min-height: 0;
+    border-right: 1px solid var(--border);
+    background: var(--panel-bg);
+}
+
+.sidebar-panel {
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px;
+}
+
+.sidebar-bottom {
+    border-top: 1px solid var(--border);
+    background: var(--panel-bg-2);
+}
+
+.app-header h1 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.app-header button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.app-header button:hover {
+    filter: brightness(1.1);
+}
+
+.hint {
+    color: var(--text-dim);
+    font-size: 11.5px;
+    margin: 8px 0 4px;
+}
+
+.hint code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    margin: 10px 0 6px;
+    flex: none;
+}
+
+/* ---------- Messages (errors / warnings) ---------- */
+
+.messages {
+    flex: none;
+}
+
+.message {
+    border-radius: 5px;
+    padding: 7px 10px;
+    margin: 6px 0;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.message.error {
+    background: rgba(255, 107, 107, 0.14);
+    border: 1px solid var(--danger);
+    color: #ffd0d0;
+}
+
+.message.warn {
+    background: rgba(255, 207, 107, 0.12);
+    border: 1px solid var(--warn);
+    color: #ffe6b3;
+}
+
+/* ---------- Summary ---------- */
+
+.summary {
+    flex: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+    margin: 4px 0 6px;
+}
+
+.summary .stat {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    border-bottom: 1px dotted var(--border);
+    padding: 2px 0;
+}
+
+.summary .stat .label {
+    color: var(--text-dim);
+}
+
+.summary .stat .value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+.summary .stat.wide {
+    grid-column: 1 / -1;
+}
+
+/* ---------- Top Offenders ---------- */
+
+.offenders-wrap {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+}
+
+.offenders {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    min-height: 0;
+    flex: 1;
+}
+
+.offender {
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.offender:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.offender.is-active {
+    background: rgba(76, 154, 255, 0.16);
+    border-color: var(--accent);
+}
+
+.offender .swatch {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: middle;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.offender .o-name {
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.offender .o-meta {
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+/* ---------- Detail panel ---------- */
+
+.detail {
+    overflow-y: auto;
+    min-height: 0;
+    flex: 1;
+}
+
+.detail .placeholder {
+    color: var(--text-dim);
+}
+
+.detail .d-name {
+    font-size: 14px;
+    font-weight: 600;
+    word-break: break-all;
+    margin: 0 0 8px;
+}
+
+.detail .d-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 2px 0;
+    border-bottom: 1px dotted var(--border);
+}
+
+.detail .d-row .label {
+    color: var(--text-dim);
+    flex: none;
+}
+
+.detail .d-row .value {
+    text-align: right;
+    word-break: break-all;
+    font-variant-numeric: tabular-nums;
+}
+
+.detail .d-section-title {
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    margin: 12px 0 4px;
+}
+
+.detail ul.d-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.detail ul.d-list li {
+    padding: 2px 0;
+    word-break: break-all;
+    color: var(--text);
+}
+
+.detail .no-dupes {
+    color: var(--warn);
+    margin-top: 8px;
+}
+
+/* ---------- Treemap area ---------- */
+
+.treemap-area {
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+    background: var(--treemap-bg);
+}
+
+/* Treemap fills the entire available area (no longer constrained to a square). */
+.treemap-square {
+    width: 100%;
+    height: 100%;
+}
+
+#treemap-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.empty-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    pointer-events: none;
+    text-align: center;
+}
+
+.empty-state.hidden {
+    display: none;
+}
+
+/* ---------- Cells ---------- */
+
+.asset-cell {
+    cursor: pointer;
+}
+
+.asset-cell .cell-base {
+    stroke: rgba(0, 0, 0, 0.18);
+    stroke-width: 0.5;
+}
+
+.asset-cell.is-duplicate-highlight .cell-base {
+    stroke: #000;
+    stroke-width: 2;
+    filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.35));
+}
+
+.asset-cell.is-selected .cell-base {
+    stroke: #000;
+    stroke-width: 2.5;
+}
+
+/* While a selection is active, desaturate everything except the duplicates. */
+.treemap-square.has-selection .asset-cell:not(.is-duplicate-highlight) {
+    filter: saturate(0);
+    opacity: 0.55;
+}
+
+/* Group container background matches the page so only the cells carry color. */
+.group-rect {
+    fill: var(--treemap-bg);
+    stroke: rgba(0, 0, 0, 0.45);
+    stroke-width: 1;
+}
+
+.group-label {
+    fill: rgba(255, 255, 255, 0.92);
+    pointer-events: none;
+    font-weight: 600;
+    font-size: 11px;
+    paint-order: stroke;
+    stroke: rgba(0, 0, 0, 0.65);
+    stroke-width: 2.5px;
+    stroke-linejoin: round;
+}
+
+/* ---------- Drop overlay ---------- */
+
+.drop-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 24, 30, 0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.drop-overlay.active {
+    display: flex;
+}
+
+.drop-overlay-inner {
+    border: 3px dashed var(--accent);
+    border-radius: 12px;
+    padding: 40px 60px;
+    font-size: 20px;
+    color: var(--text);
+}
+
+/* ---------- Tooltip ---------- */
+
+.tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(10, 12, 15, 0.95);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 9px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    max-width: 320px;
+    z-index: 200;
+    display: none;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.tooltip.visible {
+    display: block;
+}
+
+.tooltip .t-name {
+    font-weight: 600;
+    word-break: break-all;
+    margin-bottom: 3px;
+}
+
+.tooltip .t-row {
+    color: var(--text-dim);
+}
+
+.tooltip .t-row b {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.tooltip .t-dup {
+    color: var(--warn);
+}
