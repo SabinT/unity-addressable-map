@@ -396,6 +396,10 @@ h2 {
     cursor: pointer;
 }
 
+/* Cells touch with no gap (paddingInner is 0). This thin centered stroke sits
+ * on the shared edge so adjacent same-color cells stay distinct, while the
+ * cell's fill still reaches the true boundary — hovering the border line always
+ * hits a cell, never a gap. */
 .asset-cell .cell-base {
     stroke: rgba(0, 0, 0, 0.18);
     stroke-width: 0.5;

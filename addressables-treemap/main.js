@@ -490,7 +490,11 @@ function renderTreemap()
         // Reserve a 16px label strip only for groups big enough to label;
         // tiny groups get minimal top padding so their content fills the box.
         .paddingTop(node => node.depth === 1 ? (groupHasLabelStrip(node) ? 16 : 2) : 1)
-        .paddingInner(1)(cachedRoot);
+        // No inner padding: adjacent cells touch with no gap. Cells stay
+        // distinguishable via a thin centered stroke (see .cell-base in CSS),
+        // which sits on the shared edge so hovering the border still hits a
+        // cell — there is no gap to fall into.
+        .paddingInner(0)(cachedRoot);
 
     // ---- Group container rectangles + labels ----
     const groupNodes = cachedRoot.descendants().filter(d => d.depth === 1);
