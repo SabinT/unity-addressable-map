@@ -140,6 +140,7 @@ function normalizeBuildLayout(rawJson)
     const bundles = [];
     const assets = [];
     const bundleById = new Map();
+    const assetByRid = new Map(); // rid:number -> AssetRecord (for ReferencingAssets resolution)
 
     let autoAssetId = 0;
 
@@ -246,6 +247,7 @@ function normalizeBuildLayout(rawJson)
                         record.duplicateKey = getDuplicateKey(record);
 
                         assets.push(record);
+                        if (typeof assetRef.rid === "number") assetByRid.set(assetRef.rid, record);
                         bundleNode.assets.push(record);
                         bundleNode.sizeBytes += sizeBytes;
                         groupNode.sizeBytes += sizeBytes;
@@ -310,11 +312,29 @@ function normalizeBuildLayout(rawJson)
         duplicateGroups.push(g);
     }
 
-    // Attach the duplicate group to each asset for quick lookup in the UI.
+    // Attach the duplicate group to each asset, and resolve the addressable
+    // assets that pulled each implicit occurrence into its bundle. Unity's
+    // ReferencingAssets list always points to ExplicitAsset roots in the same
+    // bundle, so this answers "why is this asset in this group".
     const dupByKey = dupMap;
     for (const a of assets)
     {
         a.dup = dupByKey.get(a.duplicateKey);
+
+        if (a.explicit)
+        {
+            a.referencedBy = []; // an explicit asset is itself the addressable root
+            continue;
+        }
+        const refs = Array.isArray(a.source.ReferencingAssets) ? a.source.ReferencingAssets : [];
+        const seen = new Set();
+        const referencers = [];
+        for (const ref of refs)
+        {
+            const rec = ref && typeof ref.rid === "number" ? assetByRid.get(ref.rid) : null;
+            if (rec && !seen.has(rec.id)) { seen.add(rec.id); referencers.push(rec); }
+        }
+        a.referencedBy = referencers;
     }
 
     if (skippedNodes > 0)
@@ -697,6 +717,49 @@ function syncOffenderActive()
     if (active) active.scrollIntoView({ block: "nearest" });
 }
 
+// Per-group breakdown of *why* each group contains the duplicated asset:
+// the addressable root assets (ExplicitAssets) whose dependency closure pulled
+// it into that group's bundle, read from each occurrence's referencedBy list.
+const MAX_REFS_SHOWN = 5;
+function renderWhyGroups(g)
+{
+    // Aggregate occurrences by group, preserving each group's referencers.
+    const byGroup = new Map();
+    for (const occ of g.occurrences)
+    {
+        let entry = byGroup.get(occ.groupName);
+        if (!entry) { entry = { directlyAddressable: false, refs: new Map() }; byGroup.set(occ.groupName, entry); }
+        if (occ.explicit) entry.directlyAddressable = true;
+        for (const ref of (occ.referencedBy || []))
+        {
+            if (!entry.refs.has(ref.id)) entry.refs.set(ref.id, ref);
+        }
+    }
+
+    const groupNames = Array.from(byGroup.keys()).sort();
+    let html = `<div class="d-section-title">Groups containing this asset (${groupNames.length})</div>`;
+
+    for (const name of groupNames)
+    {
+        const entry = byGroup.get(name);
+        html += `<div class="d-why-group">${escapeHtml(name)}</div>`;
+
+        const refs = Array.from(entry.refs.values());
+        const parts = [];
+        if (entry.directlyAddressable) parts.push("directly addressable here");
+        if (refs.length)
+        {
+            const shown = refs.slice(0, MAX_REFS_SHOWN).map(r => escapeHtml(r.name)).join(", ");
+            const extra = refs.length > MAX_REFS_SHOWN ? ` (+${refs.length - MAX_REFS_SHOWN} more)` : "";
+            parts.push("pulled in by: " + shown + extra);
+        }
+        if (parts.length === 0) parts.push("no recorded referencer");
+
+        html += `<div class="d-why-refs">${parts.join("<br>")}</div>`;
+    }
+    return html;
+}
+
 function renderDetail(asset)
 {
     const g = asset.dup;
@@ -732,9 +795,7 @@ function renderDetail(asset)
 
     if (isDuplicated)
     {
-        const groups = Array.from(new Set(g.occurrences.map(o => o.groupName))).sort();
-        html += `<div class="d-section-title">Groups containing this asset (${groups.length})</div>`;
-        html += '<ul class="d-list">' + groups.map(b => `<li>${escapeHtml(b)}</li>`).join("") + "</ul>";
+        html += renderWhyGroups(g);
     }
     else
     {

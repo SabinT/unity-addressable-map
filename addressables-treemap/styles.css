@@ -353,6 +353,23 @@ h2 {
     margin-top: 8px;
 }
 
+/* Per-group "why is this asset here" breakdown. */
+.detail .d-why-group {
+    font-weight: 600;
+    color: var(--text);
+    margin: 8px 0 1px;
+    word-break: break-all;
+}
+
+.detail .d-why-refs {
+    color: var(--text-dim);
+    font-size: 11.5px;
+    line-height: 1.45;
+    padding-left: 10px;
+    border-left: 2px solid var(--border);
+    word-break: break-all;
+}
+
 /* ---------- Treemap area ---------- */
 
 .treemap-area {
