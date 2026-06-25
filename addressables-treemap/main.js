@@ -563,6 +563,7 @@ function selectAsset(asset)
     state.selectedDuplicateKey = asset.duplicateKey;
     applySelectionClasses();
     renderDetail(asset);
+    document.getElementById("deselect-btn").hidden = false;
     syncOffenderActive();
 }
 
@@ -579,9 +580,21 @@ function clearSelection()
     state.selectedAssetId = null;
     state.selectedDuplicateKey = null;
     applySelectionClasses();
-    document.getElementById("detail").innerHTML =
-        '<p class="placeholder">Select an asset to view info.</p>';
+    document.getElementById("detail").innerHTML = defaultDetailHtml();
+    document.getElementById("deselect-btn").hidden = true;
     syncOffenderActive();
+}
+
+// Shown in the bottom panel when nothing is selected: a hint plus a legend
+// explaining the brightness-encodes-duplication color scheme.
+function defaultDetailHtml()
+{
+    return '<p class="placeholder">Select an asset to view info.</p>' +
+        '<div class="legend">' +
+        '<div class="legend-title">Brighter colors indicate higher duplication</div>' +
+        '<div class="legend-bar"></div>' +
+        '<div class="legend-scale"><span>unique</span><span>most duplicated</span></div>' +
+        '</div>';
 }
 
 function applySelectionClasses()
@@ -669,11 +682,17 @@ function renderDetail(asset)
             : `<div class="d-row"><span class="label">${label}</span><span class="value">${escapeHtml(value)}</span></div>`;
 
     let html = `<p class="d-name">${escapeHtml(asset.name)}</p>`;
-    html += row("Path", asset.path);
+
+    if (asset.path)
+    {
+        html += '<div class="d-path">' +
+            `<span class="d-path-text">${escapeHtml(asset.path)}</span>` +
+            '<button class="copy-path" type="button">Copy Path</button>' +
+            '</div>';
+    }
+
     html += row("Address", asset.address);
     html += row("GUID", asset.guid);
-    html += row("Type", asset.type);
-    html += row("Kind", asset.explicit ? "Explicit" : "Implicit");
     html += row("Size", formatBytes(asset.sizeBytes));
 
     if (g)
@@ -683,15 +702,11 @@ function renderDetail(asset)
         html += row("Wasted (duplicated)", formatBytes(g.duplicatedBytes));
     }
 
-    html += row("Current bundle", asset.bundleName);
-    html += row("Current group", asset.groupName);
+    html += row("Group", asset.groupName);
 
     if (isDuplicated)
     {
-        const bundles = Array.from(new Set(g.occurrences.map(o => o.bundleName))).sort();
         const groups = Array.from(new Set(g.occurrences.map(o => o.groupName))).sort();
-        html += `<div class="d-section-title">Bundles containing this asset (${bundles.length})</div>`;
-        html += '<ul class="d-list">' + bundles.map(b => `<li>${escapeHtml(b)}</li>`).join("") + "</ul>";
         html += `<div class="d-section-title">Groups containing this asset (${groups.length})</div>`;
         html += '<ul class="d-list">' + groups.map(b => `<li>${escapeHtml(b)}</li>`).join("") + "</ul>";
     }
@@ -700,7 +715,25 @@ function renderDetail(asset)
         html += '<p class="no-dupes">No duplicates found for this asset.</p>';
     }
 
-    document.getElementById("detail").innerHTML = html;
+    const detailEl = document.getElementById("detail");
+    detailEl.innerHTML = html;
+
+    const copyBtn = detailEl.querySelector(".copy-path");
+    if (copyBtn)
+    {
+        copyBtn.addEventListener("click", () =>
+        {
+            navigator.clipboard.writeText(asset.path).then(() =>
+            {
+                copyBtn.textContent = "Copied!";
+                setTimeout(() => { copyBtn.textContent = "Copy Path"; }, 1200);
+            }).catch(() =>
+            {
+                copyBtn.textContent = "Copy failed";
+                setTimeout(() => { copyBtn.textContent = "Copy Path"; }, 1200);
+            });
+        });
+    }
 }
 
 /* ----------------------------- Tooltip --------------------------------- */
@@ -771,8 +804,8 @@ function renderApp(model, fileName)
 
     renderSummary(model, fileName);
     renderOffenders(model);
-    document.getElementById("detail").innerHTML =
-        '<p class="placeholder">Select an asset to view info.</p>';
+    document.getElementById("detail").innerHTML = defaultDetailHtml();
+    document.getElementById("deselect-btn").hidden = true;
 
     renderTreemap();
 
@@ -884,7 +917,8 @@ function initEvents()
         if (file) loadFile(file);
     });
 
-    // Escape clears selection.
+    // Deselect button + Escape both clear the current selection.
+    document.getElementById("deselect-btn").addEventListener("click", clearSelection);
     window.addEventListener("keydown", (e) =>
     {
         if (e.key === "Escape") clearSelection();
