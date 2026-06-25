@@ -23,7 +23,11 @@
                 <div id="summary" class="summary"></div>
 
                 <div class="offenders-wrap">
-                    <h2>Top Offenders</h2>
+                    <div class="offenders-head">
+                        <h2>Top Offenders</h2>
+                        <input id="offenders-filter" class="offenders-filter" type="search"
+                               placeholder="Filter…" aria-label="Filter offenders" />
+                    </div>
                     <ul id="offenders" class="offenders"></ul>
                 </div>
             </section>
@@ -43,8 +47,15 @@
                 <svg id="treemap-svg" xmlns="http://www.w3.org/2000/svg"></svg>
             </div>
             <div id="empty-state" class="empty-state">
-                <p>No build layout loaded.</p>
-                <p class="hint">Drop a <code>buildlayout.json</code> file to begin.</p>
+                <p class="es-title">No build layout loaded.</p>
+                <p class="hint">Drag &amp; drop a <code>buildlayout.json</code> file anywhere, or click <strong>Open File</strong>.</p>
+                <div class="es-help">
+                    <p class="es-help-title">Where is buildlayout.json?</p>
+                    <p>Unity writes it after an Addressables content build, inside your project folder:</p>
+                    <p class="es-path"><code>Library/com.unity.addressables/buildlayout.json</code></p>
+                    <p class="hint">Not there? Enable <strong>Build Layout Report</strong> in
+                    <strong>Edit ▸ Preferences ▸ Addressables</strong>, then build Addressables again.</p>
+                </div>
             </div>
         </main>
     </div>

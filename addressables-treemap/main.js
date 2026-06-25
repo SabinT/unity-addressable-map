@@ -651,6 +651,21 @@ function applySelectionClasses()
         const asset = d.data.asset;
         return (key && asset.duplicateKey !== key) ? asset.colorMuted : asset.color;
     });
+
+    // Outline every group box that contains an occurrence of the selection,
+    // using the selected asset's own color for the border.
+    const containingGroups = new Set();
+    let selColor = null;
+    if (key)
+    {
+        const dg = state.model.duplicateGroupsByKey.get(key);
+        if (dg) for (const occ of dg.occurrences) containingGroups.add(occ.groupName);
+        const entry = firstColorByDuplicateKey.get(key);
+        selColor = entry ? entry.color : null;
+    }
+    d3.selectAll("#treemap-svg rect.group-rect")
+        .classed("contains-selection", d => containingGroups.has(d.data.name))
+        .style("stroke", d => containingGroups.has(d.data.name) ? selColor : null);
 }
 
 /* ----------------------------- Sidebar --------------------------------- */
@@ -691,6 +706,7 @@ function renderOffenders(model)
         const li = document.createElement("li");
         li.className = "offender";
         li.dataset.duplicateKey = g.duplicateKey;
+        li.dataset.name = g.displayName.toLowerCase();
         const entry = firstColorByDuplicateKey.get(g.duplicateKey);
         const color = entry ? entry.color : "#888";
         li.innerHTML =
@@ -704,6 +720,21 @@ function renderOffenders(model)
     {
         ul.innerHTML = '<li class="offender" style="cursor:default">No duplicated assets found.</li>';
     }
+
+    // Re-apply any active filter to the freshly rendered list.
+    const filterInput = document.getElementById("offenders-filter");
+    if (filterInput && filterInput.value) filterOffenders(filterInput.value);
+}
+
+// Hide offender rows whose name doesn't contain the query (case-insensitive).
+function filterOffenders(query)
+{
+    const q = (query || "").trim().toLowerCase();
+    document.querySelectorAll("#offenders .offender").forEach(li =>
+    {
+        if (!li.dataset.name) return; // placeholder row has no name
+        li.hidden = !!q && !li.dataset.name.includes(q);
+    });
 }
 
 function syncOffenderActive()
@@ -1004,11 +1035,23 @@ function initEvents()
         if (file) loadFile(file);
     });
 
-    // Deselect button + Escape both clear the current selection.
+    // Offenders filter box.
+    const offendersFilter = document.getElementById("offenders-filter");
+    offendersFilter.addEventListener("input", () => filterOffenders(offendersFilter.value));
+
+    // Deselect button + Escape both clear the current selection. While typing in
+    // the filter, Escape clears the filter instead of the selection.
     document.getElementById("deselect-btn").addEventListener("click", clearSelection);
     window.addEventListener("keydown", (e) =>
     {
-        if (e.key === "Escape") clearSelection();
+        if (e.key !== "Escape") return;
+        if (document.activeElement === offendersFilter)
+        {
+            offendersFilter.value = "";
+            filterOffenders("");
+            return;
+        }
+        clearSelection();
     });
 
     // Responsive re-layout, debounced via rAF.
