@@ -50,8 +50,43 @@
         </aside>
 
         <main class="treemap-area" id="treemap-area">
+            <div id="view-tabs" class="view-tabs" hidden>
+                <button id="view-tab-treemap" type="button" class="is-active">Treemap</button>
+                <button id="view-tab-dupes" type="button">Duplicates</button>
+            </div>
             <div class="treemap-square" id="treemap-square">
                 <svg id="treemap-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+            </div>
+            <div id="dupes-view" class="dupes-view hidden">
+                <div class="dupes-filters">
+                    <label>Path contains
+                        <input id="dupes-filter-path" type="search" placeholder="e.g. Assets/Textures" />
+                    </label>
+                    <label class="dupes-regex">
+                        <input id="dupes-filter-regex" type="checkbox" /> Regex
+                    </label>
+                    <label>Min dupe bytes
+                        <input id="dupes-filter-bytes" type="number" min="0" step="1" placeholder="0" />
+                    </label>
+                    <label>Min count
+                        <input id="dupes-filter-count" type="number" min="2" step="1" placeholder="2" />
+                    </label>
+                    <span id="dupes-count" class="dupes-count"></span>
+                    <button id="dupes-export-btn" type="button">Export…</button>
+                </div>
+                <div class="dupes-table-wrap">
+                    <table id="dupes-table" class="dupes-table">
+                        <thead>
+                            <tr>
+                                <th data-sort-key="count" class="num">Dupe Count<span class="sort-ind"></span></th>
+                                <th data-sort-key="bytes" class="num">Total Dupe Bytes<span class="sort-ind"></span></th>
+                                <th data-sort-key="path">Asset Path<span class="sort-ind"></span></th>
+                                <th data-sort-key="name">Asset Name<span class="sort-ind"></span></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
             <div id="empty-state" class="empty-state">
                 <p class="es-title">No build layout loaded.</p>

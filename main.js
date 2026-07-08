@@ -15,6 +15,8 @@ const state = {
     selectedAssetId: null,
     selectedDuplicateKey: null,
     squareSize: 0,
+    view: "treemap",                      // "treemap" | "dupes"
+    dupesSort: { key: "bytes", dir: -1 }, // default: most wasted first
 };
 
 // Maps an asset's first-occurrence colors, keyed by duplicateKey, so every
@@ -602,6 +604,7 @@ function selectAsset(asset)
     renderDetail(asset);
     document.getElementById("deselect-btn").hidden = false;
     syncOffenderActive();
+    syncDupesActive();
 }
 
 function selectDuplicateKey(duplicateKey)
@@ -620,6 +623,7 @@ function clearSelection()
     document.getElementById("detail").innerHTML = defaultDetailHtml();
     document.getElementById("deselect-btn").hidden = true;
     syncOffenderActive();
+    syncDupesActive();
 }
 
 // Shown in the bottom panel when nothing is selected: a hint plus a legend
@@ -746,6 +750,181 @@ function syncOffenderActive()
     });
     const active = document.querySelector("#offenders .offender.is-active");
     if (active) active.scrollIntoView({ block: "nearest" });
+}
+
+/* ------------------------ Duplicates table view ------------------------ */
+
+// Flat row model for the duplicates table, rebuilt once per loaded file.
+let dupeRowsCache = null;
+
+function getDupeRows(model)
+{
+    if (!dupeRowsCache)
+    {
+        dupeRowsCache = model.duplicateGroups
+            .filter(g => g.occurrenceCount > 1)
+            .map(g => ({
+                count: g.occurrenceCount,
+                bytes: g.duplicatedBytes,
+                path: (g.occurrences[0] && g.occurrences[0].path) || "",
+                name: g.displayName,
+                duplicateKey: g.duplicateKey,
+            }));
+    }
+    return dupeRowsCache;
+}
+
+// Rows passing the current filter inputs, ordered by the current sort column.
+function getFilteredSortedDupes()
+{
+    if (!state.model) return [];
+    const pathInput = document.getElementById("dupes-filter-path");
+    const useRegex = document.getElementById("dupes-filter-regex").checked;
+    const rawQ = pathInput.value.trim();
+    const minBytes = Number(document.getElementById("dupes-filter-bytes").value) || 0;
+    const minCount = Number(document.getElementById("dupes-filter-count").value) || 0;
+
+    // Path matcher: case-insensitive substring, or regex when the Regex box is
+    // checked. An invalid regex marks the input and applies no path filter, so
+    // the table stays populated while a pattern is mid-edit.
+    let matcher = null;
+    let invalidRegex = false;
+    if (rawQ)
+    {
+        if (useRegex)
+        {
+            try
+            {
+                const re = new RegExp(rawQ, "i");
+                matcher = s => re.test(s);
+            }
+            catch (e)
+            {
+                invalidRegex = true;
+            }
+        }
+        else
+        {
+            const q = rawQ.toLowerCase();
+            matcher = s => s.toLowerCase().includes(q);
+        }
+    }
+    pathInput.classList.toggle("is-invalid", invalidRegex);
+
+    const rows = getDupeRows(state.model).filter(r =>
+        r.bytes >= minBytes &&
+        r.count >= minCount &&
+        (!matcher || matcher(r.path) || matcher(r.name)));
+
+    const { key, dir } = state.dupesSort;
+    rows.sort((a, b) =>
+    {
+        let cmp = (key === "count" || key === "bytes")
+            ? a[key] - b[key]
+            : a[key].localeCompare(b[key]);
+        if (cmp === 0 && key !== "path") cmp = a.path.localeCompare(b.path);
+        return cmp * dir;
+    });
+    return rows;
+}
+
+function renderDupesTable()
+{
+    if (!state.model) return;
+    const rows = getFilteredSortedDupes();
+    const all = getDupeRows(state.model);
+
+    // Sort indicator on the active column header.
+    document.querySelectorAll("#dupes-table th").forEach(th =>
+    {
+        th.querySelector(".sort-ind").textContent =
+            th.dataset.sortKey === state.dupesSort.key
+                ? (state.dupesSort.dir > 0 ? " ▲" : " ▼")
+                : "";
+    });
+
+    const tbody = document.querySelector("#dupes-table tbody");
+    tbody.innerHTML = "";
+    const frag = document.createDocumentFragment();
+    for (const r of rows)
+    {
+        const tr = document.createElement("tr");
+        tr.dataset.duplicateKey = r.duplicateKey;
+        tr.innerHTML =
+            `<td class="num">${r.count}</td>` +
+            `<td class="num" title="${r.bytes.toLocaleString()} B">${formatBytes(r.bytes)}</td>` +
+            `<td class="path">${escapeHtml(r.path)}</td>` +
+            `<td class="name">${escapeHtml(r.name)}</td>`;
+        tr.addEventListener("click", () => selectDuplicateKey(r.duplicateKey));
+        frag.appendChild(tr);
+    }
+    tbody.appendChild(frag);
+
+    if (rows.length === 0)
+    {
+        tbody.innerHTML =
+            '<tr class="dupes-empty"><td colspan="4">No duplicate groups match the current filters.</td></tr>';
+    }
+
+    const wastedShown = rows.reduce((sum, r) => sum + r.bytes, 0);
+    document.getElementById("dupes-count").textContent =
+        `${rows.length.toLocaleString()} of ${all.length.toLocaleString()} groups · ${formatBytes(wastedShown)} wasted`;
+
+    syncDupesActive();
+}
+
+// Mirror of syncOffenderActive for the duplicates table rows.
+function syncDupesActive()
+{
+    const key = state.selectedDuplicateKey;
+    document.querySelectorAll("#dupes-table tbody tr").forEach(tr =>
+    {
+        tr.classList.toggle("is-active", !!key && tr.dataset.duplicateKey === key);
+    });
+}
+
+function switchView(name)
+{
+    state.view = name;
+    const isDupes = name === "dupes";
+    document.getElementById("treemap-square").classList.toggle("hidden", isDupes);
+    document.getElementById("dupes-view").classList.toggle("hidden", !isDupes);
+    document.getElementById("view-tab-treemap").classList.toggle("is-active", !isDupes);
+    document.getElementById("view-tab-dupes").classList.toggle("is-active", isDupes);
+    if (isDupes) renderDupesTable();
+    else if (state.model) renderTreemap(); // re-measure after display:none
+}
+
+/* ------------------------------ CSV export ----------------------------- */
+
+// Escape one CSV field per RFC 4180: wrap in quotes and double any inner
+// quote when the value contains a comma, quote, or newline.
+function csvField(value)
+{
+    const s = value === undefined || value === null ? "" : String(value);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+// Download the duplicates table as CSV, honoring the current filters + sort.
+function exportDuplicatesCsv()
+{
+    if (!state.model) return;
+    const lines = ["Dupe Count,Total Dupe Bytes,Asset Path,Asset Name"];
+    for (const r of getFilteredSortedDupes())
+    {
+        lines.push([r.count, r.bytes, csvField(r.path), csvField(r.name)].join(","));
+    }
+
+    const base = (state.loadedFileName || "buildlayout").replace(/\.[^.]+$/, "");
+    const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = base + "-duplicates.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 }
 
 // Per-group breakdown of *why* each group contains the duplicated asset:
@@ -917,9 +1096,11 @@ function renderApp(model, fileName)
     state.selectedAssetId = null;
     state.selectedDuplicateKey = null;
     cachedRoot = null;
+    dupeRowsCache = null;
 
     document.getElementById("empty-state").classList.add("hidden");
     document.getElementById("source-help").classList.add("hidden");
+    document.getElementById("view-tabs").hidden = false;
 
     renderSummary(model, fileName);
     renderOffenders(model);
@@ -927,6 +1108,7 @@ function renderApp(model, fileName)
     document.getElementById("deselect-btn").hidden = true;
 
     renderTreemap();
+    if (state.view === "dupes") renderDupesTable();
 
     if (model.warnings && model.warnings.length)
     {
@@ -1039,6 +1221,30 @@ function initEvents()
     // Offenders filter box.
     const offendersFilter = document.getElementById("offenders-filter");
     offendersFilter.addEventListener("input", () => filterOffenders(offendersFilter.value));
+
+    // View tabs (Treemap / Duplicates).
+    document.getElementById("view-tab-treemap").addEventListener("click", () => switchView("treemap"));
+    document.getElementById("view-tab-dupes").addEventListener("click", () => switchView("dupes"));
+
+    // Duplicates table: sortable headers, live filters, CSV export.
+    document.querySelectorAll("#dupes-table th").forEach(th =>
+    {
+        th.addEventListener("click", () =>
+        {
+            const key = th.dataset.sortKey;
+            if (state.dupesSort.key === key) state.dupesSort.dir *= -1;
+            // Numeric columns start descending (biggest offenders first),
+            // text columns start ascending.
+            else state.dupesSort = { key, dir: (key === "count" || key === "bytes") ? -1 : 1 };
+            renderDupesTable();
+        });
+    });
+    for (const id of ["dupes-filter-path", "dupes-filter-bytes", "dupes-filter-count"])
+    {
+        document.getElementById(id).addEventListener("input", () => renderDupesTable());
+    }
+    document.getElementById("dupes-filter-regex").addEventListener("change", () => renderDupesTable());
+    document.getElementById("dupes-export-btn").addEventListener("click", exportDuplicatesCsv);
 
     // Deselect button + Escape both clear the current selection. While typing in
     // the filter, Escape clears the filter instead of the selection.
